@@ -1,8 +1,9 @@
 // TODO
-// determine if correct album folder
+// simply divide into can rename or not
 // custom names through arguments
 // if multiple artwork in album folder
 // / \
+// display folders relatively to input
 
 package main
 
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	coverName      = "folder"
+	coverName      = "folder33333"
 	artworkDirName = "artwork"
 )
 
@@ -51,9 +52,13 @@ func contains(slice []string, item string) bool {
 // isError each file or directory
 func visit(path string, file os.FileInfo, err error) (e error) {
 	if file.IsDir() {
-		if IsAlbumFolder(path) {
+		isAlbum, message := IsAlbumFolder(path)
+		fmt.Println(message)
+		if isAlbum {
 			visitedDirCounter++
-		} else {
+		}
+		if !IsValidToTraverse(path) {
+			fmt.Println("SKIPPED " + path)
 			return filepath.SkipDir
 		}
 	}
@@ -64,6 +69,14 @@ func visit(path string, file os.FileInfo, err error) (e error) {
 	}
 
 	dir := filepath.Dir(path)
+
+	isAlbum, _ := IsAlbumFolder(dir)
+	if !isAlbum {
+		return
+	}
+
+	fmt.Println("I WAS HERE")
+
 	newName := filepath.Join(dir, coverName+filepath.Ext(path))
 	err = os.Rename(path, newName)
 	if !isError(err, false) {
@@ -73,30 +86,14 @@ func visit(path string, file os.FileInfo, err error) (e error) {
 	return
 }
 
-// determine if album folder
-// is folder with music files and one artwork, or just folders
-func IsAlbumFolder(path string) bool {
-	var files []string
+// determine if we can traverse into directory
+func IsValidToTraverse(path string) bool {
+	isAlbum, _ := IsAlbumFolder(path)
 
-	// get all files with extension from imageFormats
-	for _, imageFormat := range imageFormats {
-		filesBuff, _ := filepath.Glob(path + "/*" + imageFormat)
-		files = append(files, filesBuff...)
+	if (isAlbum) {
+		return true
 	}
-
-	if len(files) > 1 {
-		return false
-	}
-
-	files = nil
-
-	// get all audio files
-	for _, audioFormat := range audioFormats {
-		filesBuff, _ := filepath.Glob(path + "/*" + audioFormat)
-		files = append(files, filesBuff...)
-	}
-
-	if files == nil {
+	if !isAlbum {
 		dir, err := os.Open(path)
 		isError(err, false)
 		defer dir.Close()
@@ -110,7 +107,36 @@ func IsAlbumFolder(path string) bool {
 			}
 		}
 	}
-	return files != nil
+	return false
+}
+
+// determine if album folder
+// is folder with music files and one artwork, or just folders
+func IsAlbumFolder(path string) (bool, string) {
+	var files []string
+
+	// get all audio files
+	for _, audioFormat := range audioFormats {
+		filesBuff, _ := filepath.Glob(path + "/*" + audioFormat)
+		files = append(files, filesBuff...)
+	}
+
+	if files == nil {
+		return false, path + " is not album "
+	}
+	files = nil
+
+	// get all files with extension from imageFormats
+	for _, imageFormat := range imageFormats {
+		filesBuff, _ := filepath.Glob(path + "/*" + imageFormat)
+		files = append(files, filesBuff...)
+	}
+
+	if len(files) > 1 {
+		return false, path + " looks like album but contains more than 1 artwork"
+	}
+
+	return true, path + " looks like album"
 }
 
 func main() {
