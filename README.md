@@ -1,5 +1,6 @@
 # mlp - media library parser
-Renames artwork in albums' folders. 
+Traverses through input folder and renames albums' artwork. Considers an album folder as a folder with one or more audio files (m4a, flac). Skips renaming if there is more than one image
+
 
 ## Installation
 	
@@ -8,7 +9,7 @@ Renames artwork in albums' folders.
 
 ## Usage
 
-	dir - root directory
+	dir - input directory
 
 	$ go run mlp.go dir
 
