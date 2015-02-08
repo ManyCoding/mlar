@@ -1,8 +1,6 @@
 // TODO
-// simply divide into can rename or not
-// custom names through arguments
-// if multiple artwork in album folder
-// / \
+// rename artwork folder
+// custom audio/images through arguments
 // display folders relatively to input
 
 package main
@@ -16,10 +14,9 @@ import (
 	"strings"
 )
 
-const (
-	coverName      = "folder33333"
-	artworkDirName = "artwork"
-)
+
+var inputDir string
+var coverName string
 
 var visitedDirCounter = 0
 var renamedFilesCounter = 0
@@ -27,18 +24,21 @@ var audioFormats = []string{".m4a", ".flac"}
 var imageFormats = []string{".jpg", ".jpeg", ".png"}
 
 // errors handling
-func isError(e error, fatal bool) (isAnyError bool) {
+// -1 for non-critical, 0 panic, 1 fatal
+func isError(e error, status int) bool {
 	if e != nil {
-		if fatal {
+		if status == 1 {
 			log.Fatal(e)
-		} else {
+		} else if status == 0 {
 			log.Panic(e)
+		} else if status == -1 {
+			log.Println(e)
 		}
 	}
 	return e != nil
 }
 
-// check if slice contains item
+// check if the slice contains the item
 func contains(slice []string, item string) bool {
 	set := make(map[string]struct{}, len(slice))
 	for _, s := range slice {
@@ -49,16 +49,15 @@ func contains(slice []string, item string) bool {
 	return ok
 }
 
-// isError each file or directory
+// find albums and artwork
 func visit(path string, file os.FileInfo, err error) (e error) {
 	if file.IsDir() {
-		isAlbum, message := IsAlbumFolder(path)
-		fmt.Println(message)
+		isAlbum, _ := IsAlbumFolder(path)
 		if isAlbum {
 			visitedDirCounter++
 		}
 		if !IsValidToTraverse(path) {
-			fmt.Println("SKIPPED " + path)
+			//fmt.Println("SKIPPED " + path)
 			return filepath.SkipDir
 		}
 	}
@@ -75,31 +74,31 @@ func visit(path string, file os.FileInfo, err error) (e error) {
 		return
 	}
 
-	fmt.Println("I WAS HERE")
-
 	newName := filepath.Join(dir, coverName+filepath.Ext(path))
 	err = os.Rename(path, newName)
-	if !isError(err, false) {
-		renamedFilesCounter++
+	if isError(err, -1) {
+		return
 	}
+	renamedFilesCounter++
+
 	fmt.Printf("Renamed \"%s\" >> \"%s\"\nin \"%s\"\n", filepath.Base(path), coverName+filepath.Ext(path), filepath.Base(filepath.Dir(path)))
 	return
 }
 
-// determine if we can traverse into directory
+// determine if we need to traverse into the directory
 func IsValidToTraverse(path string) bool {
 	isAlbum, _ := IsAlbumFolder(path)
 
-	if (isAlbum) {
+	if isAlbum {
 		return true
 	}
 	if !isAlbum {
 		dir, err := os.Open(path)
-		isError(err, false)
+		isError(err, 0)
 		defer dir.Close()
 
 		files, err := dir.Readdir(-1)
-		isError(err, false)
+		isError(err, 0)
 
 		for _, file := range files {
 			if file.Mode().IsDir() {
@@ -110,8 +109,7 @@ func IsValidToTraverse(path string) bool {
 	return false
 }
 
-// determine if album folder
-// is folder with music files and one artwork, or just folders
+// determine if folder is an album, e.g. contains music files
 func IsAlbumFolder(path string) (bool, string) {
 	var files []string
 
@@ -126,38 +124,44 @@ func IsAlbumFolder(path string) (bool, string) {
 	}
 	files = nil
 
-	// get all files with extension from imageFormats
-	for _, imageFormat := range imageFormats {
-		filesBuff, _ := filepath.Glob(path + "/*" + imageFormat)
-		files = append(files, filesBuff...)
-	}
-
-	if len(files) > 1 {
-		return false, path + " looks like album but contains more than 1 artwork"
-	}
-
 	return true, path + " looks like album"
+}
+
+func init() {
+	const (
+		defaultCoverName = "folder"
+		coverNameArgumentUsage = "desirable artwork name"
+		inputDirArgumentUsage = "input directory from which it starts traverse"
+	)
+	
+	// define input arguments (flags)
+	flag.StringVar(&coverName, "coverName", defaultCoverName, coverNameArgumentUsage)
+	flag.StringVar(&coverName, "n", defaultCoverName, coverNameArgumentUsage)
+	flag.StringVar(&inputDir, "inputDir", "", "input directory for traverse")
+	flag.StringVar(&inputDir, "i", "", "input directory for traverse")
 }
 
 func main() {
 	flag.Parse()
+	
+	fmt.Println("New artwork name: " + coverName + ".*")
+	fmt.Println("Input directory: " + inputDir + "\n")
 
-	args := flag.Args()
-	// isError input argument
-	if len(args) != 1 {
-		log.Fatal("One argument (path to input directory) is compulsory")
+	if inputDir == "" {
+		log.Fatal("At least one argument (input directory) is compulsory")
 	}
-	fmt.Println("Input: " + args[0])
+	
+	// check if the input directory exists
+	src, err := os.Stat(inputDir)
+	isError(err, 1)
 
-	// isError if dir exist
-	src, err := os.Stat(args[0])
-	isError(err, true)
-
+	// check if input is a folder
 	if !src.IsDir() {
-		log.Fatal(args[0] + " is not a directory")
+		log.Fatal(inputDir + " is not a directory")
 	}
 
-	// go traverse throught root, args[0] is path to root
-	filepath.Walk(args[0], visit)
+	// start traverse throught the root
+	filepath.Walk(inputDir, visit)
+	// print some statistics
 	fmt.Printf("\nfinished: %d album\u0028s\u0029 found, %d artwork\u0028s\u0029 renamed", visitedDirCounter, renamedFilesCounter)
 }
