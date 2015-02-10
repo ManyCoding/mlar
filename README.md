@@ -1,5 +1,5 @@
 # mlp - media library parser
-Traverses through input folder and renames albums' cover and artwork folders. Considers an album folder as a folder with one or more audio files (m4a, flac).
+Traverses through the input folder and renames albums' covers and artwork folders. Considers an album folder as a folder with one or more audio files (m4a, flac).
 
 
 ## Installation
@@ -10,9 +10,10 @@ Traverses through input folder and renames albums' cover and artwork folders. Co
 ## Usage
 
 	$ go run mlp.go -i="path"
+	-h/-help
 	-i/-inputDir - input directory
 	Optional arguments:
-	-n/-coverName - name for covers, default is "folder"
+	-n/-coverName - name for covers, default is "cover"
 	-afn/-artworkDirName - name for artwork folders, default is "artwork"
 	
 
