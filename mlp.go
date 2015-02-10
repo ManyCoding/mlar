@@ -1,8 +1,9 @@
 // TODO
-// rename artwork folder
 // custom audio/images through arguments
 // display folders relatively to input
 // find an album and then do renaming
+// log to file
+// skip showWarnings
 
 package main
 
@@ -56,17 +57,16 @@ func contains(slice []string, item string) bool {
 func visit(path string, file os.FileInfo, err error) (e error) {
 	// parent folder for current file/folder
 	parentDir := filepath.Dir(path)
-	if isArtworkFolder(path) {
-		fmt.Println(visitedDirCounter)
+	if IsAlbumFolder(path) {
+		visitedDirCounter++
 	}
-
 	if file.IsDir() && isArtworkFolder(path) {
 		if file.Name() == artworkFolderName {
 			return
 		}
 		newName := filepath.Join(parentDir, artworkFolderName)
 		err = os.Rename(path, newName)
-		//	check if renamed
+		// check if renamed
 		if !isError(err, -1) {
 			renamedArtworkFoldersCounter++
 			fmt.Printf("Renamed \"%s\" >> \"%s\"\nin \"%s\"\n", file.Name(), filepath.Base(newName), filepath.Base(filepath.Dir(path)))
@@ -148,9 +148,9 @@ func isArtworkFolder(path string) bool {
 
 func init() {
 	const (
-		defaultCoverName            = "folder"
+		defaultCoverName            = "cover"
 		defaultArtworkFolderName    = "artwork"
-		inputDirArgumentUsage       = "input directory from which it starts traverse"
+		inputDirArgumentUsage       = "input directory (MANDATORY)"
 		coverNameArgumentUsage      = "cover name"
 		artworkDirNameArgumentUsage = "artwork folder name"
 	)
@@ -167,12 +167,8 @@ func init() {
 func main() {
 	flag.Parse()
 
-	fmt.Println("New cover name: " + coverName + ".*")
-	fmt.Println("New artwork folder name: " + artworkFolderName)
-	fmt.Println("Input directory: " + inputDir + "\n")
-
 	if inputDir == "" {
-		log.Fatal("At least one argument (input directory) is compulsory")
+		log.Fatal("Input directory argument (-i=\"path_to_music\") is compulsory")
 	}
 
 	// check if the input directory exists
@@ -183,6 +179,10 @@ func main() {
 	if !src.IsDir() {
 		log.Fatal(inputDir + " is not a directory")
 	}
+
+	fmt.Println("New cover name: " + coverName + ".*")
+	fmt.Println("New artwork folder name: " + artworkFolderName)
+	fmt.Println("Input directory: " + inputDir + "\n")
 
 	// start traverse throught the root
 	filepath.Walk(inputDir, visit)
