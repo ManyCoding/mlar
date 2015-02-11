@@ -53,11 +53,12 @@ func contains(slice []string, item string) bool {
 	return ok
 }
 
-// visit each file and directory in the input directory
+// visit each file and directory in the isnput directory
 func visit(path string, file os.FileInfo, err error) (e error) {
 	// parent folder for current file/folder
 	parentDir := filepath.Dir(path)
 	if IsAlbumFolder(path) {
+		fmt.Println("\nIsAlbumFolder: true " + path)
 		visitedDirCounter++
 	}
 	if file.IsDir() && isArtworkFolder(path) {
@@ -129,7 +130,7 @@ func isArtworkFolder(path string) bool {
 	var files []string
 
 	// return if parent isn't an album
-	if !IsAlbumFolder(filepath.Dir(path)) {
+	if !IsAlbumFolder(filepath.Dir(path)) || IsAlbumFolder(path) {
 		return false
 	}
 
